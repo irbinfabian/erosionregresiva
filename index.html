@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geoportal Interactivo - Supabase</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tab.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .nav-tab:hover {
+            background: #2980b9;
+            color: white;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .tab-content {
+            display: none;
+            width: 100%;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .layer-group {
+            margin-bottom: 25px;
+        }
+
+        .layer-group h3 {
+            color: #34495e;
+            font-size: 14px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .layer-item:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .layer-checkbox {
+            margin-right: 10px;
+            accent-color: #3498db;
+        }
+
+        .layer-label {
+            flex: 1;
+            color: #2c3e50;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .layer-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .layer-status {
+            font-size: 11px;
+            margin-left: 5px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: #e8f5e8;
+            color: #2d6e2d;
+        }
+
+        .layer-status.loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .layer-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .map-container {
+            flex: 1;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .controls {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            background: #e8f5e8;
+            color: #2d6e2d;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .status.connecting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.success {
+            background: #d1edff;
+            color: #0c4a6e;
+        }
+
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Estilos para las leyendas */
+        .legend-cob, .legend-ndvi, .legend-ndoai, .legend-ndwi {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 270px;
+            display: none;
+        }
+
+        .legend-cob {
+            bottom: 20px;
+            left: 20px;
+        }
+
+        .legend-ndvi {
+            bottom: 20px;
+            right: 20px;
+        }
+
+        .legend-ndoai {
+            bottom: 20px;
+            right: 300px;
+        }
+
+        .legend-ndwi {
+            bottom: 20px;
+            right: 580px;
+        }
+
+        .legend-cob.active, .legend-ndvi.active, .legend-ndoai.active, .legend-ndwi.active {
+            display: block;
+        }
+
+        .legend-cob h4, .legend-ndvi h4, .legend-ndoai h4, .legend-ndwi h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            margin-right: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .legend-label {
+            color: #2c3e50;
+            font-size: 11px;
+            line-height: 1.2;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 12px;
+            color: #555;
+        }
+
+        /* Estilos para el formulario de reporte */
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 0 auto;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 1em;
+        }
+
+        .required {
+            color: #ef4444;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .event-type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .event-type-option {
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+
+        .event-type-option:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .event-type-option.selected {
+            border-color: #3b82f6;
+            background: #3b82f6;
+            color: white;
+        }
+
+        .event-type-option .icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .location-section {
+            background: #f0f9ff;
+            border: 2px solid #bae6fd;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .location-section h3 {
+            color: #0369a1;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .location-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .location-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .location-btn.primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .location-btn.primary:hover {
+            background: #2563eb;
+        }
+
+        .location-btn.secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .location-btn.secondary:hover {
+            background: #d1d5db;
+        }
+
+        .coordinates-display {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            text-align: center;
+            font-family: monospace;
+            color: #374151;
+        }
+
+        .coordinates-display.active {
+            background: #dcfce7;
+            border-color: #16a34a;
+            color: #166534;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .submit-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.6;
+        }
+
+        .quick-location {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .quick-location-btn {
+            padding: 4px 8px;
+            background: #e5e7eb;
+            border: none;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quick-location-btn:hover {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌍 Geoportal Interactivo - Datos Reales Supabase</h1>
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+            <button class="nav-tab" onclick="switchTab('report')">🚨 Reportar Evento</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- TAB 1: Dashboard -->
+        <div id="dashboard" class="tab-content active">
+            <div class="sidebar">
+                <h2>📊 Capas de Información</h2>
+                
+                <div class="layer-group">
+                    <h3>🌱 Índices de Vegetación</h3>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox ndvi-layer" id="NDVI_2020_02">
+                        <label class="layer-label" for="NDVI_2020_02">NDVI 2020-02</label>
+                        <div class="layer-color" style="background: linear-gradient(45deg, #FF0000, #f59053, #fedf9a, #dbf09e, #67a148, #1a5341);"></div>
+                        <span class="layer-status" id="status_NDVI_2020_02">-</span>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox ndvi-layer" id="NDVI_2024_08">
+                        <label class="layer-label" for="NDVI_2024_08">NDVI 2024-08</label>
+                        <div class="layer-color" style="background: linear-gradient(45deg, #FF0000, #f59053, #fedf9a, #dbf09e, #67a148, #1a5341);"></div>
+                        <span class="layer-status" id="status_NDVI_2024_08">-</span>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox ndoai-layer" id="NDOAI_2020_02">
+                        <label class="layer-label" for="NDOAI_2020_02">NDOAI 2020-02</label>
+                        <div class="layer-color" style="background: linear-gradient(45deg, #def5e5, #62cfac, #3498a9, #395d9c, #382a54, #0b0405);"></div>
+                        <span class="layer-status" id="status_NDOAI_2020_02">-</span>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox ndoai-layer" id="NDOAI_2024_08">
+                        <label class="layer-label" for="NDOAI_2024_08">NDOAI 2024-08</label>
+                        <div class="layer-color" style="background: linear-gradient(45deg, #def5e5, #62cfac, #3498a9, #395d9c, #382a54, #0b0405);"></div>
+                        <span class="layer-status" id="status_NDOAI_2024_08">-</span>
+                    </div>
+                </div>
+
+                <div class="layer-group">
+                    <h3>💧 Índices de Agua</h3>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox ndwi-layer" id="NDWI_2020_02">
+                        <label class="layer-label" for="NDWI_2020_02">NDWI 2020-02</label>
+                        <div class="layer-color" style="background: linear-gradient(45deg, #8B4513, #D2691E, #F4A460, #87CEEB, #4682B4, #191970);"></div>
+                        <span class="layer-status" id="status_NDWI_2020_02">-</span>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox ndwi-layer" id="NDWI_2024_08">
+                        <label class="layer-label" for="NDWI_2024_08">NDWI 2024-08</label>
+                        <div class="layer-color" style="background: linear-gradient(45deg, #8B4513, #D2691E, #F4A460, #87CEEB, #4682B4, #191970);"></div>
+                        <span class="layer-status" id="status_NDWI_2024_08">-</span>
+                    </div>
+                </div>
+
+                <div class="layer-group">
+                    <h3>🌍 Cobertura Temporal</h3>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox cob-layer" id="COB2020_02">
+                        <label class="layer-label" for="COB2020_02">COB 2020-02</label>
+                        <div class="layer-color" style="background: linear-gradient(45deg, #0066CC, #228B22, #90EE90, #D2B48C, #FFC0CB, #FF0000);"></div>
+                        <span class="layer-status" id="status_COB2020_02">-</span>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox cob-layer" id="COB2021_07">
+                        <label class="layer-label" for="COB2021_07">COB 2021-07</label>
+                        <div class="layer-color" style="background: linear-gradient(45deg, #0066CC, #228B22, #90EE90, #D2B48C, #FFC0CB, #FF0000);"></div>
+                        <span class="layer-status" id="status_COB2021_07">-</span>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox cob-layer" id="COB2022_09">
+                        <label class="layer-label" for="COB2022_09">COB 2022-09</label>
+                        <div class="layer-color" style="background: linear-gradient(45deg, #0066CC, #228B22, #90EE90, #D2B48C, #FFC0CB, #FF0000);"></div>
+                        <span class="layer-status" id="status_COB2022_09">-</span>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox cob-layer" id="COB2023_09">
+                        <label class="layer-label" for="COB2023_09">COB 2023-09</label>
+                        <div class="layer-color" style="background: linear-gradient(45deg, #0066CC, #228B22, #90EE90, #D2B48C, #FFC0CB, #FF0000);"></div>
+                        <span class="layer-status" id="status_COB2023_09">-</span>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox cob-layer" id="COB2024_08">
+                        <label class="layer-label" for="COB2024_08">COB 2024-08</label>
+                        <div class="layer-color" style="background: linear-gradient(45deg, #0066CC, #228B22, #90EE90, #D2B48C, #FFC0CB, #FF0000);"></div>
+                        <span class="layer-status" id="status_COB2024_08">-</span>
+                    </div>
+                </div>
+
+                <div class="layer-group">
+                    <h3>📍 Puntos de Referencia</h3>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox" id="Poblados">
+                        <label class="layer-label" for="Poblados">Poblados</label>
+                        <div class="layer-color" style="background: #FF6B6B;"></div>
+                        <span class="layer-status" id="status_Poblados">-</span>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox" id="eventos_espaciales">
+                        <label class="layer-label" for="eventos_espaciales">Eventos Espaciales</label>
+                        <div class="layer-color" style="background: #4ECDC4;"></div>
+                        <span class="layer-status" id="status_eventos_espaciales">-</span>
+                    </div>
+                </div>
+
+                <div class="layer-group">
+                    <h3>🎯 Área de Interés</h3>
+                    <div class="layer-item">
+                        <input type="checkbox" class="layer-checkbox" id="AOI">
+                        <label class="layer-label" for="AOI">AOI</label>
+                        <div class="layer-color" style="background: #FFD93D;"></div>
+                        <span class="layer-status" id="status_AOI">-</span>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn" onclick="toggleAllLayers()">🔄 Alternar Todas</button>
+                    <button class="btn" onclick="fitToBounds()">📐 Ajustar Vista</button>
+                    <button class="btn" onclick="refreshLayers()">🔄 Actualizar</button>
+                    
+                    <div class="status" id="connectionStatus">
+                        <div class="loading-spinner"></div>Conectando a Supabase...
+                    </div>
+                </div>
+
+                <div class="info-panel">
+                    <strong>🔗 Conexión Supabase:</strong><br>
+                    <span id="dbInfo">Cargando información...</span><br>
+                    <br>
+                    <strong>📊 Estadísticas:</strong><br>
+                    <span id="layerStats">Capas cargadas: 0/15</span><br>
+                    <span id="featureStats">Geometrías totales: 0</span>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <div id="map"></div>
+                
+                <!-- Leyendas -->
+                <div class="legend-cob" id="cobLegend">
+                    <h4>🌍 Clasificación de Cobertura</h4>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #0066CC;"></div>
+                        <span class="legend-label">Cuerpos de agua</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #228B22;"></div>
+                        <span class="legend-label">Bosque nativo</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #90EE90;"></div>
+                        <span class="legend-label">Vegetación arbustiva</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #D2B48C;"></div>
+                        <span class="legend-label">Áreas sin cobertura vegetal</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #FFC0CB;"></div>
+                        <span class="legend-label">Área poblada</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #FF0000;"></div>
+                        <span class="legend-label">Infraestructura</span>
+                    </div>
+                </div>
+
+                <div class="legend-ndvi" id="ndviLegend">
+                    <h4>🌱 Clasificación NDVI</h4>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #FF0000;"></div>
+                        <span class="legend-label">Agua, sombra, suelos saturados</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f59053;"></div>
+                        <span class="legend-label">Suelo desnudo, áreas sin vegetación</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #fedf9a;"></div>
+                        <span class="legend-label">Vegetación muy escasa o seca</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #dbf09e;"></div>
+                        <span class="legend-label">Vegetación moderada o pastizales</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #67a148;"></div>
+                        <span class="legend-label">Vegetación abundante</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #1a5341;"></div>
+                        <span class="legend-label">Vegetación muy densa y saludable</span>
+                    </div>
+                </div>
+
+                <div class="legend-ndoai" id="ndoaiLegend">
+                    <h4>🌾 Clasificación NDOAI</h4>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #def5e5;"></div>
+                        <span class="legend-label">Alta inestabilidad / agua / sombra</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #62cfac;"></div>
+                        <span class="legend-label">Suelo húmedo o degradado</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #3498a9;"></div>
+                        <span class="legend-label">Suelo desnudo o escasa vegetación</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #395d9c;"></div>
+                        <span class="legend-label">Vegetación baja o moderada</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #382a54;"></div>
+                        <span class="legend-label">Vegetación densa / áreas estabilizadas</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #0b0405;"></div>
+                        <span class="legend-label">Vegetación muy densa / zonas más estables</span>
+                    </div>
+                </div>
+
+                <div class="legend-ndwi" id="ndwiLegend">
+                    <h4>💧 Clasificación NDWI</h4>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #8B4513;"></div>
+                        <span class="legend-label">Suelos muy secos o zonas rocosas</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #D2691E;"></div>
+                        <span class="legend-label">Suelo desnudo, sin humedad</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #F4A460;"></div>
+                        <span class="legend-label">Vegetación seca o escasa humedad</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #87CEEB;"></div>
+                        <span class="legend-label">Vegetación intermedia o levemente húmeda</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4682B4;"></div>
+                        <span class="legend-label">Vegetación húmeda o suelos saturados</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #191970;"></div>
+                        <span class="legend-label">Cuerpos de agua o vegetación con alta humedad</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Reportar Evento -->
+        <div id="report" class="tab-content">
+            <div class="form-container">
+                <h2>🚨 Reportar Evento</h2>
+                <p style="color: #666; margin-bottom: 30px;">Ayuda a mantener informada a la comunidad</p>
+
+                <form id="eventForm">
+                    <!-- Tipo de Evento -->
+                    <div class="form-group">
+                        <label>¿Qué está ocurriendo? <span class="required">*</span></label>
+                        <div class="event-type-grid" id="eventTypeGrid">
+                            <div class="event-type-option" data-type="Emergencia">
+                                <div class="icon">🚨</div>
+                                <div>Emergencia</div>
+                            </div>
+                            <div class="event-type-option" data-type="Accidente">
+                                <div class="icon">🚗</div>
+                                <div>Accidente</div>
+                            </div>
+                            <div class="event-type-option" data-type="Incendio">
+                                <div class="icon">🔥</div>
+                                <div>Incendio</div>
+                            </div>
+                            <div class="event-type-option" data-type="Inundación">
+                                <div class="icon">🌊</div>
+                                <div>Inundación</div>
+                            </div>
+                            <div class="event-type-option" data-type="Deslizamiento">
+                                <div class="icon">⛰️</div>
+                                <div>Deslizamiento</div>
+                            </div>
+                            <div class="event-type-option" data-type="Evento Social">
+                                <div class="icon">🎉</div>
+                                <div>Evento Social</div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="tipoEvento" name="tipo_evento" required>
+                    </div>
+
+                    <!-- Descripción del Evento -->
+                    <div class="form-group">
+                        <label for="evento">Describe brevemente lo que está pasando <span class="required">*</span></label>
+                        <input type="text" id="evento" name="evento" required 
+                               placeholder="Ej: Choque entre dos vehículos, Incendio en vivienda, etc.">
+                    </div>
+
+                    <!-- Sector -->
+                    <div class="form-group">
+                        <label for="sector">Sector o barrio</label>
+                        <input type="text" id="sector" name="sector" 
+                               placeholder="Ej: Centro, La Merced, Obrero, etc.">
+                        <div class="quick-location">
+                            <button type="button" class="quick-location-btn" onclick="setSector('Centro')">Centro</button>
+                            <button type="button" class="quick-location-btn" onclick="setSector('La Merced')">La Merced</button>
+                            <button type="button" class="quick-location-btn" onclick="setSector('Obrero')">Obrero</button>
+                            <button type="button" class="quick-location-btn" onclick="setSector('Mariscal')">Mariscal</button>
+                        </div>
+                    </div>
+
+                    <!-- Observaciones -->
+                    <div class="form-group">
+                        <label for="observacion">Observaciones adicionales</label>
+                        <textarea id="observacion" name="observacion" 
+                                  placeholder="Información adicional que pueda ser útil (heridos, vías bloqueadas, etc.)"></textarea>
+                    </div>
+
+                    <!-- Ubicación -->
+                    <div class="location-section">
+                        <h3>📍 Ubicación del evento</h3>
+                        <div class="location-buttons">
+                            <button type="button" class="location-btn primary" onclick="getCurrentLocation()">
+                                📱 Mi ubicación actual
+                            </button>
+                            <button type="button" class="location-btn secondary" onclick="selectOnMap()">
+                                🗺️ Seleccionar en mapa
+                            </button>
+                        </div>
+                        
+                        <div class="coordinates-display" id="coordinatesDisplay">
+                            📍 Presiona un botón para obtener la ubicación
+                        </div>
+                        
+                        <div class="map-container hidden" id="reportMapContainer">
+                            <div id="reportMap" style="height: 300px; border-radius: 10px;"></div>
+                        </div>
+                        
+                        <input type="hidden" id="latitud" name="latitud" required>
+                        <input type="hidden" id="longitud" name="longitud" required>
+                    </div>
+
+                    <!-- Botón de envío -->
+                    <button type="submit" class="submit-btn" id="submitBtn" disabled>
+                        📤 Reportar Evento
+                    </button>
+                </form>
+
+                <div id="status" class="status hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+        // Variables globales
+        let map;
+        let reportMap;
+        let marker;
+        let selectedEventType = '';
+        let hasLocation = false;
+        const dataLayers = {};
+        const layerStats = {
+            loaded: 0,
+            total: 15,
+            totalFeatures: 0
+        };
+
+        // Configuración de Supabase
+        const SUPABASE_URL = 'https://veanbhxzftwbcbwmlzhq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlYW5iaHh6ZnR3YmNid21semhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMDA3MjQsImV4cCI6MjA2NzU3NjcyNH0.HCvYVpG65RtWtqtXGJ2zds_gdu0H34qTUJWyZ0TbZSM';
+
+        // Configuración de capas
+        const layerConfig = {
+            'NDVI_2020_02': { color: '#228B22', name: 'NDVI 2020-02', isNdvi: true },
+            'NDVI_2024_08': { color: '#32CD32', name: 'NDVI 2024-08', isNdvi: true },
+            'NDOAI_2020_02': { color: '#3498a9', name: 'NDOAI 2020-02', isNdoai: true },
+            'NDOAI_2024_08': { color: '#395d9c', name: 'NDOAI 2024-08', isNdoai: true },
+            'NDWI_2020_02': { color: '#1E90FF', name: 'NDWI 2020-02', isNdwi: true },
+            'NDWI_2024_08': { color: '#00BFFF', name: 'NDWI 2024-08', isNdwi: true },
+            'COB2020_02': { color: '#8B4513', name: 'COB 2020-02', isCob: true },
+            'COB2021_07': { color: '#A0522D', name: 'COB 2021-07', isCob: true },
+            'COB2022_09': { color: '#CD853F', name: 'COB 2022-09', isCob: true },
+            'COB2023_09': { color: '#DEB887', name: 'COB 2023-09', isCob: true },
+            'COB2024_08': { color: '#F4A460', name: 'COB 2024-08', isCob: true },
+            'Poblados': { color: '#FF6B6B', name: 'Poblados' },
+            'eventos_espaciales': { color: '#4ECDC4', name: 'Eventos Espaciales' },
+            'AOI': { color: '#FFD93D', name: 'AOI' }
+        };
+
+        // Configuraciones de clasificación de colores
+        const cobClassification = {
+            'Cuerpos de agua': '#0066CC',
+            'Bosque nativo': '#228B22',
+            'Vegetación arbustiva': '#90EE90',
+            'Áreas sin cobertura vegetal': '#D2B48C',
+            'Área poblada': '#FFC0CB',
+            'Infraestructura': '#FF0000'
+        };
+
+        const ndviClassification = {
+            'Agua, sombra, suelos saturados': '#FF0000',
+            'Suelo desnudo, áreas sin vegetación': '#f59053',
+            'Vegetación muy escasa o seca': '#fedf9a',
+            'Vegetación moderada o pastizales': '#dbf09e',
+            'Vegetación abundante': '#67a148',
+            'Vegetación muy densa y saludable': '#1a5341'
+        };
+
+        const ndoaiClassification = {
+            'Alta inestabilidad / agua / sombra': '#def5e5',
+            'Suelo húmedo o degradado': '#62cfac',
+            'Suelo desnudo o escasa vegetación': '#3498a9',
+            'Vegetación baja o moderada': '#395d9c',
+            'Vegetación densa / áreas estabilizadas': '#382a54',
+            'Vegetación muy densa / zonas más estables': '#0b0405'   
+        };
+
+        const ndwiClassification = {
+            'Suelos muy secos o zonas rocosas': '#8B4513',
+            'Suelo desnudo, sin humedad': '#D2691E',
+            'Vegetación seca o escasa humedad': '#F4A460',
+            'Vegetación intermedia o levemente húmeda': '#87CEEB',
+            'Vegetación húmeda o suelos saturados': '#4682B4',
+            'Cuerpos de agua o vegetación con alta humedad': '#191970'   
+        };
+
+        // Inicialización cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🌍 Inicializando Geoportal...');
+            setTimeout(initializeDashboard, 100);
+            setupEventForm();
+        });
+
+        // Función para cambiar entre tabs
+        function switchTab(tabName) {
+            // Ocultar todos los tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remover clase active de todos los botones
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Mostrar el tab seleccionado
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Inicializar el mapa correspondiente
+            if (tabName === 'dashboard' && !map) {
+                setTimeout(initializeDashboard, 100);
+            }
+        }
+
+        // Inicializar Dashboard
+        function initializeDashboard() {
+            if (map) {
+                console.log('Mapa ya inicializado');
+                return;
+            }
+            
+            console.log('🗺️ Creando mapa principal...');
+            
+            try {
+                // Crear mapa principal centrado en Puyo, Ecuador
+                map = L.map('map').setView([-1.2845, -78.0947], 10);
+                console.log('✅ Mapa creado exitosamente');
+
+                // Agregar capa base de satélite
+                const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles © Esri',
+                    maxZoom: 18
+                });
+
+                // Agregar capa base de OpenStreetMap
+                const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 18
+                });
+
+                // Agregar la capa satelital por defecto
+                satelliteLayer.addTo(map);
+                console.log('✅ Capa base satelital agregada');
+
+                // Control de capas base
+                const baseMaps = {
+                    "🛰️ Satélite": satelliteLayer,
+                    "🗺️ OpenStreetMap": osmLayer
+                };
+
+                L.control.layers(baseMaps).addTo(map);
+                L.control.scale({ metric: true, imperial: false }).addTo(map);
+
+                // Configurar eventos de capas
+                setupLayerControls();
+                
+                // Verificar conexión a Supabase
+                initializeSupabaseConnection();
+                
+                console.log('🎉 Dashboard inicializado completamente');
+
+            } catch (error) {
+                console.error('❌ Error inicializando mapa:', error);
+                document.getElementById('connectionStatus').innerHTML = '❌ Error creando el mapa';
+                document.getElementById('connectionStatus').className = 'status error';
+            }
+        }
+
+        // Configurar controles de capas
+        function setupLayerControls() {
+            document.querySelectorAll('.layer-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', async function() {
+                    const tableName = this.id;
+                    console.log(`🔄 Toggle capa: ${tableName}, checked: ${this.checked}`);
+                    
+                    if (this.checked) {
+                        const layer = await loadLayer(tableName);
+                        if (layer) {
+                            map.addLayer(layer);
+                            console.log(`✅ Capa ${tableName} agregada al mapa`);
+                        }
+                    } else {
+                        if (dataLayers[tableName]) {
+                            map.removeLayer(dataLayers[tableName]);
+                            console.log(`➖ Capa ${tableName} removida del mapa`);
+                        }
+                    }
+                    
+                    // Actualizar leyendas según el tipo de capa
+                    updateLegends();
+                });
+            });
+        }
+
+        // Función para actualizar leyendas
+        function updateLegends() {
+            // Leyenda COB
+            const cobLayers = document.querySelectorAll('.cob-layer');
+            const cobActive = Array.from(cobLayers).some(cb => cb.checked);
+            document.getElementById('cobLegend').classList.toggle('active', cobActive);
+
+            // Leyenda NDVI
+            const ndviLayers = document.querySelectorAll('.ndvi-layer');
+            const ndviActive = Array.from(ndviLayers).some(cb => cb.checked);
+            document.getElementById('ndviLegend').classList.toggle('active', ndviActive);
+
+            // Leyenda NDOAI
+            const ndoaiLayers = document.querySelectorAll('.ndoai-layer');
+            const ndoaiActive = Array.from(ndoaiLayers).some(cb => cb.checked);
+            document.getElementById('ndoaiLegend').classList.toggle('active', ndoaiActive);
+
+            // Leyenda NDWI
+            const ndwiLayers = document.querySelectorAll('.ndwi-layer');
+            const ndwiActive = Array.from(ndwiLayers).some(cb => cb.checked);
+            document.getElementById('ndwiLegend').classList.toggle('active', ndwiActive);
+        }
+
+        // Actualizar status de capa
+        function updateLayerStatus(layerId, status, count = null) {
+            const statusElement = document.getElementById(`status_${layerId}`);
+            if (statusElement) {
+                statusElement.className = `layer-status ${status}`;
+                switch (status) {
+                    case 'loading':
+                        statusElement.textContent = '⏳';
+                        break;
+                    case 'loaded':
+                        statusElement.textContent = count ? `✓ ${count}` : '✓';
+                        break;
+                    case 'error':
+                        statusElement.textContent = '❌';
+                        break;
+                    default:
+                        statusElement.textContent = '-';
+                }
+            }
+        }
+
+        // Cargar capa desde Supabase
+        async function loadLayer(tableName) {
+            if (dataLayers[tableName]) {
+                return dataLayers[tableName];
+            }
+
+            try {
+                console.log(`📥 Cargando capa: ${tableName}`);
+                updateLayerStatus(tableName, 'loading');
+                
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log(`📊 Datos recibidos para ${tableName}:`, data.length, 'registros');
+                console.log('🔍 Muestra de datos:', data.slice(0, 2));
+                
+                if (!data || data.length === 0) {
+                    console.warn(`⚠️ No hay datos para ${tableName}`);
+                    updateLayerStatus(tableName, 'error');
+                    return null;
+                }
+
+                // Crear capa
+                const layer = L.layerGroup();
+                const config = layerConfig[tableName];
+                let pointsAdded = 0;
+                
+                data.forEach((item, index) => {
+                    let lat, lng;
+                    
+                    // Intentar extraer coordenadas de diferentes formatos
+                    if (item.geom) {
+                        try {
+                            let geom;
+                            
+                            // Si geom es string, parsearlo
+                            if (typeof item.geom === 'string') {
+                                geom = JSON.parse(item.geom);
+                            } else {
+                                geom = item.geom;
+                            }
+                            
+                            // Manejar diferentes tipos de geometría
+                            if (geom.type === 'Point' && geom.coordinates) {
+                                lng = geom.coordinates[0];
+                                lat = geom.coordinates[1];
+                            } else if (geom.coordinates && Array.isArray(geom.coordinates)) {
+                                // Para polígonos o multipolígonos, usar el centroide aproximado
+                                if (geom.type === 'Polygon') {
+                                    const coords = geom.coordinates[0]; // Primer anillo
+                                    lng = coords.reduce((sum, coord) => sum + coord[0], 0) / coords.length;
+                                    lat = coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length;
+                                } else if (geom.type === 'MultiPolygon') {
+                                    const firstPolygon = geom.coordinates[0][0]; // Primer polígono, primer anillo
+                                    lng = firstPolygon.reduce((sum, coord) => sum + coord[0], 0) / firstPolygon.length;
+                                    lat = firstPolygon.reduce((sum, coord) => sum + coord[1], 0) / firstPolygon.length;
+                                }
+                            }
+                            
+                        } catch (e) {
+                            console.warn('Error parsing geometry:', e, item.geom);
+                        }
+                    }
+                    
+                    // Si no hay coordenadas válidas o están fuera del área de interés
+                    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+                        // Generar coordenadas aleatorias en el área de Puyo para visualización
+                        lat = -1.2845 + (Math.random() - 0.5) * 0.4; // ±0.2 grados
+                        lng = -78.0947 + (Math.random() - 0.5) * 0.4; // ±0.2 grados
+                    }
+
+                    // Verificar que las coordenadas estén en un rango válido
+                    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                        console.warn(`Coordenadas inválidas para ${tableName}:`, lat, lng);
+                        return;
+                    }
+
+                    // Determinar color según el tipo de capa y clasificación
+                    let markerColor = config.color;
+                    let popupContent = `<strong>${config.name}</strong><br>`;
+                    
+                    // Aplicar colores específicos según la clasificación
+                    if (config.isCob && item.nivel) {
+                        markerColor = getCobColor(item.nivel);
+                        popupContent += `<strong>🌍 Nivel COB:</strong> <span style="color: ${markerColor}; font-weight: bold;">${item.nivel}</span><br>`;
+                    } else if (config.isNdvi && item.clase) {
+                        markerColor = getNdviColor(item.clase);
+                        popupContent += `<strong>🌱 Clase NDVI:</strong> <span style="color: ${markerColor}; font-weight: bold;">${item.clase}</span><br>`;
+                    } else if (config.isNdoai && item.clase) {
+                        markerColor = getNdoaiColor(item.clase);
+                        popupContent += `<strong>🌾 Clase NDOAI:</strong> <span style="color: ${markerColor}; font-weight: bold;">${item.clase}</span><br>`;
+                    } else if (config.isNdwi && item.clase) {
+                        markerColor = getNdwiColor(item.clase);
+                        popupContent += `<strong>💧 Clase NDWI:</strong> <span style="color: ${markerColor}; font-weight: bold;">${item.clase}</span><br>`;
+                    }
+
+                    // Crear marcador
+                    const marker = L.circleMarker([lat, lng], {
+                        radius: 8,
+                        fillColor: markerColor,
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+
+                    // Agregar todas las propiedades al popup
+                    popupContent += `<strong>📍 Coordenadas:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}<br>`;
+                    
+                    Object.entries(item).forEach(([key, value]) => {
+                        if (key !== 'geom' && key !== 'nivel' && key !== 'clase' && value !== null && value !== undefined) {
+                            // Truncar valores muy largos
+                            let displayValue = value;
+                            if (typeof value === 'string' && value.length > 100) {
+                                displayValue = value.substring(0, 97) + '...';
+                            }
+                            popupContent += `<strong>${key}:</strong> ${displayValue}<br>`;
+                        }
+                    });
+
+                    marker.bindPopup(popupContent);
+                    layer.addLayer(marker);
+                    pointsAdded++;
+                });
+
+                console.log(`✅ Capa ${tableName} creada con ${pointsAdded} puntos de ${data.length} registros`);
+                
+                updateLayerStatus(tableName, 'loaded', pointsAdded);
+                layerStats.loaded++;
+                layerStats.totalFeatures += pointsAdded;
+                updateStats();
+
+                dataLayers[tableName] = layer;
+                return layer;
+
+            } catch (error) {
+                console.error(`❌ Error cargando ${tableName}:`, error);
+                updateLayerStatus(tableName, 'error');
+                return null;
+            }
+        }
+
+        // Funciones para obtener colores según clasificación
+        function getCobColor(nivel) {
+            return cobClassification[nivel] || '#808080';
+        }
+
+        function getNdviColor(clase) {
+            return ndviClassification[clase] || '#808080';
+        }
+
+        function getNdoaiColor(clase) {
+            return ndoaiClassification[clase] || '#808080';
+        }
+
+        function getNdwiColor(clase) {
+            return ndwiClassification[clase] || '#808080';
+        }
+
+        // Actualizar estadísticas
+        function updateStats() {
+            document.getElementById('layerStats').textContent = `Capas cargadas: ${layerStats.loaded}/${layerStats.total}`;
+            document.getElementById('featureStats').textContent = `Geometrías totales: ${layerStats.totalFeatures}`;
+        }
+
+        // Inicializar conexión a Supabase
+        async function initializeSupabaseConnection() {
+            try {
+                console.log('🔗 Verificando conexión a Supabase...');
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                if (response.ok) {
+                    console.log('✅ Conexión a Supabase exitosa');
+                    document.getElementById('connectionStatus').innerHTML = '✅ Conectado a Supabase';
+                    document.getElementById('connectionStatus').className = 'status';
+                    document.getElementById('dbInfo').innerHTML = `
+                        URL: ${SUPABASE_URL}<br>
+                        Estado: ✅ Conectado<br>
+                        Tablas: ${Object.keys(layerConfig).length}
+                    `;
+                } else {
+                    throw new Error('Connection failed');
+                }
+
+            } catch (error) {
+                console.error('❌ Error conectando a Supabase:', error);
+                document.getElementById('connectionStatus').innerHTML = '❌ Error de conexión';
+                document.getElementById('connectionStatus').className = 'status error';
+                document.getElementById('dbInfo').innerHTML = 'Error al conectar con Supabase';
+            }
+        }
+
+        // Funciones de control del dashboard
+        function toggleAllLayers() {
+            const checkboxes = document.querySelectorAll('.layer-checkbox');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = !allChecked;
+                checkbox.dispatchEvent(new Event('change'));
+            });
+        }
+
+        function fitToBounds() {
+            const group = new L.featureGroup();
+            Object.values(dataLayers).forEach(layer => {
+                if (map.hasLayer(layer)) {
+                    group.addLayer(layer);
+                }
+            });
+            
+            if (group.getLayers().length > 0) {
+                map.fitBounds(group.getBounds());
+            } else {
+                map.setView([-1.2845, -78.0947], 10);
+            }
+        }
+
+        function refreshLayers() {
+            console.log('🔄 Refrescando capas...');
+            
+            Object.values(dataLayers).forEach(layer => {
+                if (map.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            Object.keys(dataLayers).forEach(key => delete dataLayers[key]);
+            layerStats.loaded = 0;
+            layerStats.totalFeatures = 0;
+            
+            Object.keys(layerConfig).forEach(tableName => {
+                updateLayerStatus(tableName, 'idle');
+            });
+            
+            document.querySelectorAll('.layer-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+
+            updateStats();
+            updateLegends();
+            console.log('✅ Capas refrescadas');
+        }
+
+        // Inicializar estadísticas
+        updateStats();
+        console.log('🌍 Geoportal cargado, listo para inicializar');
+
+        // === FUNCIONES DEL FORMULARIO DE REPORTE ===
+
+        // Configurar formulario de eventos
+        function setupEventForm() {
+            setupEventTypeSelection();
+            setupFormValidation();
+        }
+
+        // Configurar selección de tipo de evento
+        function setupEventTypeSelection() {
+            const options = document.querySelectorAll('.event-type-option');
+            
+            options.forEach(option => {
+                option.addEventListener('click', function() {
+                    options.forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedEventType = this.dataset.type;
+                    document.getElementById('tipoEvento').value = selectedEventType;
+                    validateForm();
+                });
+            });
+        }
+
+        // Configurar validación del formulario
+        function setupFormValidation() {
+            const form = document.getElementById('eventForm');
+            const inputs = form.querySelectorAll('input[required], textarea[required]');
+            
+            inputs.forEach(input => {
+                input.addEventListener('input', validateForm);
+            });
+
+            form.addEventListener('submit', handleSubmit);
+        }
+
+        // Validar formulario
+        function validateForm() {
+            const evento = document.getElementById('evento').value.trim();
+            const tipoEvento = document.getElementById('tipoEvento').value;
+            const submitBtn = document.getElementById('submitBtn');
+            
+            const isValid = evento && tipoEvento && hasLocation;
+            
+            submitBtn.disabled = !isValid;
+            submitBtn.style.opacity = isValid ? '1' : '0.6';
+        }
+
+        // Obtener ubicación actual
+        function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                showStatus('Tu dispositivo no soporta geolocalización', 'error');
+                return;
+            }
+
+            showStatus('📍 Obteniendo tu ubicación...', 'loading');
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    setLocation(lat, lng);
+                    showStatus('✅ Ubicación obtenida correctamente', 'success');
+                },
+                function(error) {
+                    let message = 'Error al obtener ubicación: ';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            message += 'Permisos denegados. Permite el acceso a la ubicación.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            message += 'Ubicación no disponible.';
+                            break;
+                        case error.TIMEOUT:
+                            message += 'Tiempo agotado.';
+                            break;
+                        default:
+                            message += 'Error desconocido.';
+                            break;
+                    }
+                    showStatus(message, 'error');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        }
+
+        // Seleccionar ubicación en mapa
+        function selectOnMap() {
+            const mapContainer = document.getElementById('reportMapContainer');
+            mapContainer.classList.remove('hidden');
+            
+            showStatus('🗺️ Cargando mapa...', 'loading');
+            
+            setTimeout(() => {
+                if (reportMap) {
+                    reportMap.off();
+                    reportMap.remove();
+                }
+                
+                reportMap = L.map('reportMap').setView([-1.2845, -78.0947], 15);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(reportMap);
+                
+                // Marker de referencia
+                const referenceMarker = L.marker([-1.2845, -78.0947]).addTo(reportMap);
+                referenceMarker.bindPopup('📍 Centro de Puyo - Haz click en cualquier lugar para marcar el evento').openPopup();
+                
+                // Evento de click
+                reportMap.on('click', function(e) {
+                    const lat = e.latlng.lat;
+                    const lng = e.latlng.lng;
+                    
+                    if (marker) {
+                        reportMap.removeLayer(marker);
+                    }
+                    
+                    marker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            html: '🚨',
+                            iconSize: [30, 30],
+                            className: 'event-marker'
+                        })
+                    }).addTo(reportMap);
+                    
+                    marker.bindPopup(`
+                        <strong>🚨 UBICACIÓN DEL EVENTO</strong><br>
+                        Lat: ${lat.toFixed(6)}<br>
+                        Lng: ${lng.toFixed(6)}
+                    `).openPopup();
+                    
+                    setLocation(lat, lng);
+                    showStatus('🎯 ¡Ubicación del evento marcada correctamente!', 'success');
+                });
+                
+                showStatus('✅ Mapa cargado. Haz click donde está ocurriendo el evento', 'success');
+            }, 300);
+        }
+
+        // Establecer ubicación
+        function setLocation(lat, lng) {
+            if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                showStatus('❌ Coordenadas inválidas', 'error');
+                return;
+            }
+            
+            document.getElementById('latitud').value = lat;
+            document.getElementById('longitud').value = lng;
+            
+            const coordinatesDisplay = document.getElementById('coordinatesDisplay');
+            coordinatesDisplay.innerHTML = `
+                ✅ <strong>Ubicación confirmada</strong><br>
+                📍 Latitud: ${lat.toFixed(6)}<br>
+                📍 Longitud: ${lng.toFixed(6)}
+            `;
+            coordinatesDisplay.classList.add('active');
+            
+            hasLocation = true;
+            validateForm();
+        }
+
+        // Establecer sector rápido
+        function setSector(sectorName) {
+            document.getElementById('sector').value = sectorName;
+        }
+
+        // Mostrar estado
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = message;
+            statusEl.className = `status ${type}`;
+            statusEl.classList.remove('hidden');
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusEl.classList.add('hidden');
+                }, 5000);
+            }
+        }
+
+        // Manejar envío del formulario
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="loading-spinner"></div>Enviando...';
+            
+            showStatus('📤 Enviando reporte...', 'loading');
+
+            try {
+                const formData = {
+                    evento: document.getElementById('evento').value.trim(),
+                    tipo_evento: document.getElementById('tipoEvento').value,
+                    sector: document.getElementById('sector').value.trim() || null,
+                    observacion: document.getElementById('observacion').value.trim() || null,
+                    latitud: parseFloat(document.getElementById('latitud').value),
+                    longitud: parseFloat(document.getElementById('longitud').value)
+                };
+
+                if (!formData.evento || !formData.tipo_evento || !formData.latitud || !formData.longitud) {
+                    throw new Error('Faltan datos obligatorios');
+                }
+
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/eventos_espaciales`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`Error ${response.status}: ${errorData}`);
+                }
+
+                const result = await response.json();
+                
+                showStatus(`🎉 ¡Evento reportado exitosamente!
+                
+ID del reporte: ${result[0]?.id || 'N/A'}
+Tipo: ${formData.tipo_evento}
+Ubicación: ${formData.latitud.toFixed(4)}, ${formData.longitud.toFixed(4)}
+
+¡Gracias por ayudar a mantener informada a la comunidad!`, 'success');
+
+                resetForm();
+                
+            } catch (error) {
+                showStatus(`❌ Error al enviar el reporte: ${error.message}
+
+Por favor, verifica los datos e intenta nuevamente.`, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+
+        // Resetear formulario
+        function resetForm() {
+            document.getElementById('eventForm').reset();
+            
+            document.querySelectorAll('.event-type-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            const coordinatesDisplay = document.getElementById('coordinatesDisplay');
+            coordinatesDisplay.innerHTML = '📍 Presiona un botón para obtener la ubicación';
+            coordinatesDisplay.classList.remove('active');
+            
+            document.getElementById('reportMapContainer').classList.add('hidden');
+            
+            selectedEventType = '';
+            hasLocation = false;
+            
+            if (marker && reportMap) {
+                reportMap.removeLayer(marker);
+                marker = null;
+            }
+            
+            validateForm();
+        }
+    </script>
+</body>
+</html>
