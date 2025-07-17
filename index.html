@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geoportal Interactivo - Supabase</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 24px;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .map-area {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .layer-group {
+            margin-bottom: 20px;
+        }
+
+        .layer-group h3 {
+            color: #34495e;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .layer-item:hover {
+            background: #f8f9fa;
+        }
+
+        .layer-checkbox {
+            margin-right: 10px;
+        }
+
+        .layer-label {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .layer-status {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #e8f5e8;
+            color: #2d6e2d;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn.events-btn {
+            background: #e74c3c;
+        }
+
+        .btn.events-btn:hover {
+            background: #c0392b;
+        }
+
+        .status {
+            background: #e8f5e8;
+            color: #2d6e2d;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            background: #e74c3c;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .coord-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .coord-row input {
+            flex: 1;
+        }
+
+        .submit-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        .submit-btn:hover {
+            background: #229954;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .event-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .event-item:hover {
+            background: #e9ecef;
+        }
+
+        .map-placeholder {
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(45deg, #e3f2fd, #bbdefb);
+            border: 2px dashed #2196f3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            color: #1976d2;
+        }
+
+        .controls {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .info-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌍 Geoportal Interactivo - Supabase</h1>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <h2>📊 Capas de Información</h2>
+            
+            <div class="layer-group">
+                <h3>🌱 Índices de Vegetación</h3>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="NDVI_2020_02">
+                    <label class="layer-label" for="NDVI_2020_02">NDVI 2020-02</label>
+                    <span class="layer-status" id="status_NDVI_2020_02">-</span>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="NDVI_2024_08">
+                    <label class="layer-label" for="NDVI_2024_08">NDVI 2024-08</label>
+                    <span class="layer-status" id="status_NDVI_2024_08">-</span>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="NDOAI_2020_02">
+                    <label class="layer-label" for="NDOAI_2020_02">NDOAI 2020-02</label>
+                    <span class="layer-status" id="status_NDOAI_2020_02">-</span>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="NDOAI_2024_08">
+                    <label class="layer-label" for="NDOAI_2024_08">NDOAI 2024-08</label>
+                    <span class="layer-status" id="status_NDOAI_2024_08">-</span>
+                </div>
+            </div>
+
+            <div class="layer-group">
+                <h3>💧 Índices de Agua</h3>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="NDWI_2020_02">
+                    <label class="layer-label" for="NDWI_2020_02">NDWI 2020-02</label>
+                    <span class="layer-status" id="status_NDWI_2020_02">-</span>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="NDWI_2024_08">
+                    <label class="layer-label" for="NDWI_2024_08">NDWI 2024-08</label>
+                    <span class="layer-status" id="status_NDWI_2024_08">-</span>
+                </div>
+            </div>
+
+            <div class="layer-group">
+                <h3>🌍 Cobertura Temporal</h3>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="COB2020_02">
+                    <label class="layer-label" for="COB2020_02">COB 2020-02</label>
+                    <span class="layer-status" id="status_COB2020_02">-</span>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="COB2021_07">
+                    <label class="layer-label" for="COB2021_07">COB 2021-07</label>
+                    <span class="layer-status" id="status_COB2021_07">-</span>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="COB2022_09">
+                    <label class="layer-label" for="COB2022_09">COB 2022-09</label>
+                    <span class="layer-status" id="status_COB2022_09">-</span>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="COB2023_09">
+                    <label class="layer-label" for="COB2023_09">COB 2023-09</label>
+                    <span class="layer-status" id="status_COB2023_09">-</span>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="COB2024_08">
+                    <label class="layer-label" for="COB2024_08">COB 2024-08</label>
+                    <span class="layer-status" id="status_COB2024_08">-</span>
+                </div>
+            </div>
+
+            <div class="layer-group">
+                <h3>📍 Puntos de Referencia</h3>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="Poblados">
+                    <label class="layer-label" for="Poblados">Poblados</label>
+                    <span class="layer-status" id="status_Poblados">-</span>
+                </div>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="eventos_espaciales">
+                    <label class="layer-label" for="eventos_espaciales">Eventos Espaciales</label>
+                    <span class="layer-status" id="status_eventos_espaciales">-</span>
+                </div>
+            </div>
+
+            <div class="layer-group">
+                <h3>🎯 Área de Interés</h3>
+                <div class="layer-item">
+                    <input type="checkbox" class="layer-checkbox" id="AOI">
+                    <label class="layer-label" for="AOI">AOI</label>
+                    <span class="layer-status" id="status_AOI">-</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn" onclick="loadAllLayers()">🔄 Cargar Capas</button>
+                <button class="btn" onclick="testConnection()">🔗 Test Conexión</button>
+                <button class="btn events-btn" onclick="openModal()">📋 Eventos</button>
+                
+                <div class="status" id="connectionStatus">
+                    Listo para conectar
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <strong>📊 Estadísticas:</strong><br>
+                <span id="layerStats">Capas: 0/15</span><br>
+                <span id="featureStats">Registros: 0</span><br>
+                <span id="eventsStats">Eventos: 0</span>
+            </div>
+        </div>
+
+        <div class="map-area">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Eventos -->
+    <div class="modal" id="eventsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📋 Reporte de Eventos</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="eventsForm">
+                    <div class="form-group">
+                        <label>Título del Evento *</label>
+                        <input type="text" id="titulo" required placeholder="Ej: Deforestación detectada">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipo de Evento *</label>
+                        <select id="tipo" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="Deforestación">Deforestación</option>
+                            <option value="Incendio">Incendio</option>
+                            <option value="Inundación">Inundación</option>
+                            <option value="Construcción">Construcción</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Severidad</label>
+                        <select id="severidad">
+                            <option value="Baja">🟢 Baja</option>
+                            <option value="Media" selected>🟡 Media</option>
+                            <option value="Alta">🟠 Alta</option>
+                            <option value="Crítica">🔴 Crítica</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Coordenadas *</label>
+                        <div class="coord-row">
+                            <input type="number" id="latitud" step="any" placeholder="Latitud" value="-0.1807" required>
+                            <input type="number" id="longitud" step="any" placeholder="Longitud" value="-78.4678" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <textarea id="descripcion" rows="3" placeholder="Describe el evento..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Reportado por</label>
+                        <input type="text" id="reportado_por" placeholder="Nombre del reportante">
+                    </div>
+
+                    <button type="submit" class="submit-btn">✅ Registrar Evento</button>
+                    <div id="formMessage"></div>
+                </form>
+
+                <hr style="margin: 20px 0;">
+                
+                <h3>📊 Eventos Registrados <button class="btn" onclick="loadEvents()" style="margin-left: 10px;">🔄</button></h3>
+                <div id="eventsList">
+                    <p>Cargando eventos...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Configuración
+        const SUPABASE_URL = 'https://veanbhxzftwbcbwmlzhq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlYW5iaHh6ZnR3YmNid21semhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMDA3MjQsImV4cCI6MjA2NzU3NjcyNH0.HCvYVpG65RtWtqtXGJ2zds_gdu0H34qTUJWyZ0TbZSM';
+
+        // Variables
+        let stats = { layers: 0, features: 0, events: 0 };
+        let map;
+        let layerGroups = {};
+
+        // Lista de tablas
+        const tables = [
+            'NDVI_2020_02', 'NDVI_2024_08', 'NDOAI_2020_02', 'NDOAI_2024_08',
+            'NDWI_2020_02', 'NDWI_2024_08', 'COB2020_02', 'COB2021_07', 
+            'COB2022_09', 'COB2023_09', 'COB2024_08', 'Poblados', 
+            'eventos_espaciales', 'AOI'
+        ];
+
+        // Inicializar mapa
+        function initMap() {
+            console.log('Inicializando mapa...');
+            
+            map = L.map('map').setView([-0.1807, -78.4678], 10);
+            
+            // Agregar tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Evento de clic para coordenadas
+            map.on('click', function(e) {
+                const lat = e.latlng.lat.toFixed(6);
+                const lng = e.latlng.lng.toFixed(6);
+                
+                // Actualizar coordenadas en el formulario si el modal está abierto
+                if (document.getElementById('eventsModal').classList.contains('active')) {
+                    document.getElementById('latitud').value = lat;
+                    document.getElementById('longitud').value = lng;
+                }
+                
+                L.popup()
+                    .setLatLng(e.latlng)
+                    .setContent(`<b>Coordenadas:</b><br>Lat: ${lat}<br>Lng: ${lng}`)
+                    .openOn(map);
+            });
+
+            console.log('Mapa inicializado correctamente');
+        }
+
+        // Función para actualizar status
+        function updateStatus(id, status, count = '') {
+            const element = document.getElementById(`status_${id}`);
+            if (element) {
+                if (status === 'loading') {
+                    element.textContent = '⏳';
+                    element.style.background = '#fff3cd';
+                } else if (status === 'success') {
+                    element.textContent = `✅ ${count}`;
+                    element.style.background = '#d4edda';
+                } else if (status === 'error') {
+                    element.textContent = '❌';
+                    element.style.background = '#f8d7da';
+                } else {
+                    element.textContent = '-';
+                    element.style.background = '#e8f5e8';
+                }
+            }
+        }
+
+        // Función para actualizar estadísticas
+        function updateStats() {
+            document.getElementById('layerStats').textContent = `Capas: ${stats.layers}/15`;
+            document.getElementById('featureStats').textContent = `Registros: ${stats.features}`;
+            document.getElementById('eventsStats').textContent = `Eventos: ${stats.events}`;
+        }
+
+        // Función para cargar una tabla
+        async function loadTable(tableName) {
+            try {
+                updateStatus(tableName, 'loading');
+                
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus(tableName, 'success', data.length);
+                    stats.features += data.length;
+                    
+                    if (tableName === 'eventos_espaciales') {
+                        stats.events = data.length;
+                    }
+                    
+                    // Agregar al mapa si hay geometrías
+                    if (data.length > 0 && map) {
+                        addLayerToMap(tableName, data);
+                    }
+                    
+                    console.log(`${tableName}: ${data.length} registros`);
+                    return data;
+                } else {
+                    throw new Error(`Error ${response.status}`);
+                }
+            } catch (error) {
+                updateStatus(tableName, 'error');
+                console.error(`Error en ${tableName}:`, error);
+                return null;
+            }
+        }
+
+        // Función para agregar capa al mapa
+        function addLayerToMap(tableName, data) {
+            console.log(`Agregando ${tableName} al mapa con ${data.length} features`);
+            
+            // Limpiar capa anterior si existe
+            if (layerGroups[tableName]) {
+                map.removeLayer(layerGroups[tableName]);
+            }
+            
+            const features = [];
+            
+            data.forEach(item => {
+                if (item.geom) {
+                    try {
+                        let geometry;
+                        if (typeof item.geom === 'string') {
+                            geometry = JSON.parse(item.geom);
+                        } else {
+                            geometry = item.geom;
+                        }
+                        
+                        features.push({
+                            type: 'Feature',
+                            geometry: geometry,
+                            properties: item
+                        });
+                    } catch (e) {
+                        console.warn('Error parsing geometry:', e);
+                    }
+                }
+            });
+            
+            if (features.length > 0) {
+                const geojson = {
+                    type: 'FeatureCollection',
+                    features: features
+                };
+                
+                // Crear capa con estilos
+                const layer = L.geoJSON(geojson, {
+                    style: function(feature) {
+                        return getLayerStyle(tableName);
+                    },
+                    pointToLayer: function(feature, latlng) {
+                        return L.circleMarker(latlng, {
+                            radius: 6,
+                            fillColor: getLayerColor(tableName),
+                            color: '#fff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+                    },
+                    onEachFeature: function(feature, layer) {
+                        let popupContent = `<strong>${tableName}</strong><br>`;
+                        Object.entries(feature.properties).forEach(([key, value]) => {
+                            if (key !== 'geom' && value !== null && value !== undefined) {
+                                popupContent += `<strong>${key}:</strong> ${value}<br>`;
+                            }
+                        });
+                        layer.bindPopup(popupContent);
+                    }
+                });
+                
+                layerGroups[tableName] = layer;
+                layer.addTo(map);
+                
+                console.log(`Capa ${tableName} agregada con ${features.length} geometrías`);
+            }
+        }
+
+        // Función para obtener color de capa
+        function getLayerColor(tableName) {
+            const colors = {
+                'NDVI_2020_02': '#228B22',
+                'NDVI_2024_08': '#32CD32',
+                'NDOAI_2020_02': '#3498a9',
+                'NDOAI_2024_08': '#395d9c',
+                'NDWI_2020_02': '#1E90FF',
+                'NDWI_2024_08': '#00BFFF',
+                'COB2020_02': '#8B4513',
+                'COB2021_07': '#A0522D',
+                'COB2022_09': '#CD853F',
+                'COB2023_09': '#DEB887',
+                'COB2024_08': '#F4A460',
+                'Poblados': '#FF6B6B',
+                'eventos_espaciales': '#4ECDC4',
+                'AOI': '#FFD93D'
+            };
+            return colors[tableName] || '#666666';
+        }
+
+        // Función para obtener estilo de capa
+        function getLayerStyle(tableName) {
+            return {
+                color: getLayerColor(tableName),
+                weight: 2,
+                opacity: 0.8,
+                fillOpacity: 0.6
+            };
+        }
+
+        // Función para cargar todas las capas
+        async function loadAllLayers() {
+            console.log('Cargando todas las capas...');
+            stats = { layers: 0, features: 0, events: 0 };
+            
+            for (const table of tables) {
+                const data = await loadTable(table);
+                if (data !== null) {
+                    stats.layers++;
+                }
+                updateStats();
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            console.log('Carga completa:', stats);
+            
+            // Ajustar vista del mapa a todas las capas
+            if (map && Object.keys(layerGroups).length > 0) {
+                const group = new L.featureGroup(Object.values(layerGroups));
+                if (group.getLayers().length > 0) {
+                    map.fitBounds(group.getBounds());
+                }
+            }
+        }
+
+        // Función para probar conexión
+        async function testConnection() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                if (response.ok) {
+                    document.getElementById('connectionStatus').textContent = '✅ Conectado a Supabase';
+                    document.getElementById('connectionStatus').style.background = '#d4edda';
+                    alert('✅ Conexión exitosa!');
+                } else {
+                    throw new Error('Error de conexión');
+                }
+            } catch (error) {
+                document.getElementById('connectionStatus').textContent = '❌ Error de conexión';
+                document.getElementById('connectionStatus').style.background = '#f8d7da';
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Funciones del modal
+        function openModal() {
+            document.getElementById('eventsModal').classList.add('active');
+            loadEvents();
+        }
+
+        function closeModal() {
+            document.getElementById('eventsModal').classList.remove('active');
+        }
+
+        // Función para cargar eventos
+        async function loadEvents() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/eventos_espaciales?select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const events = await response.json();
+                    displayEvents(events);
+                } else {
+                    throw new Error('Error al cargar eventos');
+                }
+            } catch (error) {
+                document.getElementById('eventsList').innerHTML = '<p style="color: red;">Error al cargar eventos</p>';
+            }
+        }
+
+        // Función para mostrar eventos
+        function displayEvents(events) {
+            const container = document.getElementById('eventsList');
+            
+            if (events.length === 0) {
+                container.innerHTML = '<p>No hay eventos registrados</p>';
+                return;
+            }
+
+            const html = events.map(event => `
+                <div class="event-item">
+                    <strong>${event.titulo || 'Sin título'}</strong>
+                    <br>
+                    <small>
+                        Tipo: ${event.tipo || 'N/A'} | 
+                        Severidad: ${event.severidad || 'N/A'}
+                        <br>
+                        📍 ${event.latitud}, ${event.longitud}
+                        ${event.descripcion ? '<br>' + event.descripcion : ''}
+                    </small>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Manejar envío del formulario
+        document.getElementById('eventsForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const data = {
+                titulo: document.getElementById('titulo').value,
+                tipo: document.getElementById('tipo').value,
+                severidad: document.getElementById('severidad').value,
+                latitud: parseFloat(document.getElementById('latitud').value),
+                longitud: parseFloat(document.getElementById('longitud').value),
+                descripcion: document.getElementById('descripcion').value,
+                reportado_por: document.getElementById('reportado_por').value,
+                fecha_registro: new Date().toISOString()
+            };
+
+            // Crear geometría
+            data.geom = JSON.stringify({
+                type: 'Point',
+                coordinates: [data.longitud, data.latitud]
+            });
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/eventos_espaciales`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const messageDiv = document.getElementById('formMessage');
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = '<div class="message success">✅ Evento registrado exitosamente</div>';
+                    this.reset();
+                    document.getElementById('latitud').value = '-0.1807';
+                    document.getElementById('longitud').value = '-78.4678';
+                    loadEvents();
+                } else {
+                    throw new Error('Error al registrar');
+                }
+            } catch (error) {
+                const messageDiv = document.getElementById('formMessage');
+                messageDiv.innerHTML = '<div class="message error">❌ Error al registrar evento</div>';
+            }
+        });
+
+        // Manejar checkboxes
+        document.querySelectorAll('.layer-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const tableName = this.id;
+                if (this.checked) {
+                    loadTable(tableName);
+                } else {
+                    // Remover capa del mapa
+                    if (layerGroups[tableName]) {
+                        map.removeLayer(layerGroups[tableName]);
+                        delete layerGroups[tableName];
+                    }
+                    updateStatus(tableName, 'idle');
+                }
+            });
+        });
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('eventsModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Inicialización
+        window.addEventListener('load', function() {
+            console.log('🌍 Geoportal cargado y listo');
+            
+            // Inicializar mapa primero
+            setTimeout(() => {
+                initMap();
+            }, 100);
+            
+            updateStats();
+        });
+
+    </script>
+</body>
+</html>
