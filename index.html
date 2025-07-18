@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geoportal Interactivo - Supabase</title>
+    <title>Geoportal Erosión Regresiva del Río Coca</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <style>
         * {
@@ -664,7 +664,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>🌍 Geoportal Interactivo - Datos Reales Supabase</h1>
+        <h1>🌍Datos Reales Supabase</h1>
         <button class="report-btn" onclick="openReportModal()">🚨 Reportar Evento</button>
     </div>
 
@@ -1113,7 +1113,7 @@
         // FUNCIONES DEL GEOPORTAL
         function initializeGeoportal() {
             // Inicializar el mapa principal
-            map = L.map('map').setView([-0.1807, -78.4678], 10);
+            map = L.map('map').setView([-0.109192, -77.604675], 10);
 
             // Capas base
             const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
