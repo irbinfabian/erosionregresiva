@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red de Monitoreo Climático - Sucumbíos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #2d1b69 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+        
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="grad" cx="50%" cy="50%" r="50%"><stop offset="0%" style="stop-color:rgba(0,150,255,0.1)"/><stop offset="100%" style="stop-color:transparent"/></radialGradient></defs><circle cx="20" cy="30" r="3" fill="url(%23grad)"><animate attributeName="r" values="3;8;3" dur="4s" repeatCount="indefinite"/></circle><circle cx="80" cy="70" r="2" fill="url(%23grad)"><animate attributeName="r" values="2;6;2" dur="3s" repeatCount="indefinite"/></circle><circle cx="60" cy="20" r="4" fill="url(%23grad)"><animate attributeName="r" values="4;9;4" dur="5s" repeatCount="indefinite"/></circle></svg>') repeat;
+            animation: float 20s ease-in-out infinite;
+            z-index: -1;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 40px;
+            margin: 20px;
+            color: white;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid rgba(0, 200, 255, 0.3);
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00c8ff, transparent);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 0 5px #00c8ff; }
+            to { box-shadow: 0 0 20px #00c8ff, 0 0 30px #00c8ff; }
+        }
+        
+        .header h1 {
+            background: linear-gradient(45deg, #00c8ff, #0078ff, #7b2cbf);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            animation: gradient 3s ease infinite;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            opacity: 0;
+            animation: fadeInUp 1s ease 0.5s forwards;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(0, 200, 255, 0.1) 0%, rgba(123, 44, 191, 0.1) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        .stat-card:hover::before {
+            left: 100%;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 200, 255, 0.2);
+            border-color: rgba(0, 200, 255, 0.5);
+        }
+        
+        .stat-number {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            background: linear-gradient(45deg, #00c8ff, #0078ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .map-container {
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 40px 0;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+        
+        .map-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 200, 255, 0.03) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .map-svg {
+            width: 100%;
+            height: auto;
+            max-height: 700px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .canton-boundary {
+            fill: rgba(0, 255, 136, 0.08);
+            stroke: #00ff88;
+            stroke-width: 1.5;
+            filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.3));
+            transition: all 0.3s ease;
+        }
+        
+        .canton-boundary:hover {
+            fill: rgba(0, 255, 136, 0.15);
+            stroke-width: 2;
+        }
+        
+        .province-boundary {
+            fill: none;
+            stroke: #00c8ff;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 15px rgba(0, 200, 255, 0.6));
+            animation: borderPulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes borderPulse {
+            0%, 100% { stroke-opacity: 0.8; }
+            50% { stroke-opacity: 1; }
+        }
+        
+        .radar-coverage {
+            fill: rgba(0, 200, 255, 0.12);
+            stroke: #00c8ff;
+            stroke-width: 2;
+            stroke-dasharray: 10,5;
+            filter: drop-shadow(0 0 15px rgba(0, 200, 255, 0.3));
+            animation: radarSweep 3s ease-in-out infinite;
+        }
+        
+        @keyframes radarSweep {
+            0% { stroke-dashoffset: 0; opacity: 0.4; }
+            50% { stroke-dashoffset: -15; opacity: 0.8; }
+            100% { stroke-dashoffset: -30; opacity: 0.4; }
+        }
+        
+        .station-ema {
+            fill: #ff4444;
+            stroke: white;
+            stroke-width: 3;
+            cursor: pointer;
+            filter: drop-shadow(0 0 10px rgba(255, 68, 68, 0.8));
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            animation: heartbeat 2.5s ease-in-out infinite;
+        }
+        
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        
+        .station-ema:hover {
+            fill: #ff6666;
+            transform: scale(1.6);
+            filter: drop-shadow(0 0 25px rgba(255, 68, 68, 1));
+        }
+        
+        .station-pluvio {
+            fill: #4CAF50;
+            stroke: white;
+            stroke-width: 2;
+            cursor: pointer;
+            filter: drop-shadow(0 0 8px rgba(76, 175, 80, 0.7));
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            animation: bounce 3s ease-in-out infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        
+        .station-pluvio:hover {
+            fill: #66BB6A;
+            transform: scale(1.8) translateY(-6px);
+            filter: drop-shadow(0 0 20px rgba(76, 175, 80, 1));
+        }
+        
+        .radar-station {
+            fill: url(#radarGradient);
+            stroke: white;
+            stroke-width: 4;
+            cursor: pointer;
+            filter: drop-shadow(0 0 20px rgba(156, 39, 176, 0.9));
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            animation: radarSpin 4s linear infinite;
+        }
+        
+        @keyframes radarSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .radar-station:hover {
+            transform: scale(1.4) rotate(180deg);
+            filter: drop-shadow(0 0 30px rgba(156, 39, 176, 1));
+        }
+        
+        .station-label {
+            font-size: 11px;
+            font-weight: bold;
+            text-anchor: middle;
+            fill: white;
+            pointer-events: none;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.9);
+            opacity: 0.95;
+            transition: all 0.3s ease;
+        }
+        
+        .canton-label {
+            font-size: 13px;
+            font-weight: bold;
+            text-anchor: middle;
+            fill: rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+        }
+        
+        .connection-line {
+            stroke: url(#connectionGradient);
+            stroke-width: 2;
+            stroke-dasharray: 6,4;
+            opacity: 0.7;
+            filter: drop-shadow(0 0 4px rgba(0, 200, 255, 0.6));
+            animation: dataFlow 2s linear infinite;
+        }
+        
+        @keyframes dataFlow {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -10; }
+        }
+        
+        .control-center {
+            fill: url(#centerGradient);
+            stroke: #00c8ff;
+            stroke-width: 4;
+            filter: drop-shadow(0 0 25px rgba(0, 200, 255, 1));
+            animation: centerPulse 2.5s ease-in-out infinite;
+        }
+        
+        @keyframes centerPulse {
+            0%, 100% { stroke-width: 4; }
+            50% { stroke-width: 6; }
+        }
+        
+        .legend {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 25px;
+            border-radius: 15px;
+            font-size: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+        
+        .legend:hover {
+            background: rgba(0, 0, 0, 0.9);
+            transform: scale(1.05);
+        }
+        
+        .legend h4 {
+            color: #00c8ff;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 1px solid rgba(0, 200, 255, 0.3);
+            padding-bottom: 5px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .legend-item:hover {
+            transform: translateX(8px);
+            color: #00c8ff;
+        }
+        
+        .legend-symbol {
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .legend-item:hover .legend-symbol {
+            box-shadow: 0 0 12px currentColor;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-top: 40px;
+        }
+        
+        .info-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            border-radius: 20px;
+            border-left: 4px solid #00c8ff;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .info-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00c8ff, transparent);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .info-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 30px 60px rgba(0, 200, 255, 0.15);
+            border-left-color: #0078ff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .info-card h3 {
+            color: #00c8ff;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(25px);
+            color: white;
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1000;
+            border: 1px solid rgba(0, 200, 255, 0.4);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+            transform: scale(0.8);
+            max-width: 300px;
+        }
+        
+        .tooltip.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .data-stream {
+            stroke: #00c8ff;
+            stroke-width: 1.5;
+            fill: none;
+            opacity: 0.8;
+            animation: streamFlow 3s ease-in-out infinite;
+        }
+        
+        @keyframes streamFlow {
+            0% { stroke-dasharray: 0, 100; }
+            50% { stroke-dasharray: 100, 0; }
+            100% { stroke-dasharray: 0, 100; }
+        }
+        
+        .weather-particle {
+            fill: rgba(255, 255, 255, 0.4);
+            animation: weatherFloat 10s ease-in-out infinite;
+        }
+        
+        @keyframes weatherFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(15px, -20px) rotate(90deg); }
+            50% { transform: translate(-8px, -35px) rotate(180deg); }
+            75% { transform: translate(-20px, -15px) rotate(270deg); }
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 12px 18px;
+            border-radius: 25px;
+            font-size: 14px;
+            border: 1px solid rgba(0, 255, 0, 0.4);
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background: #00ff00;
+            border-radius: 50%;
+            animation: statusPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.3); }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🌦️ Red Integral de Monitoreo Climático</h1>
+            <div class="subtitle">Provincia de Sucumbíos - Ecuador</div>
+            <div class="subtitle">Sistema de Alertas Tempranas y Gestión de Riesgos - Región Amazónica</div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">8</div>
+                <div>Estaciones Meteorológicas Automáticas (EMA)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">15</div>
+                <div>Estaciones Pluviométricas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3</div>
+                <div>Radares Doppler Furuno WR-2120</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">18,612</div>
+                <div>km² de Cobertura Total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">524K</div>
+                <div>Beneficiarios Directos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">$1.47M</div>
+                <div>Inversión Total USD</div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>Sistema Operativo - Tiempo Real</span>
+            </div>
+            
+            <div class="legend">
+                <h4>🎯 Red de Monitoreo Sucumbíos</h4>
+                <div class="legend-item">
+                    <div class="legend-symbol" style="background: #ff4444; border-radius: 50%; box-shadow: 0 0 12px #ff4444;"></div>
+                    <span>Estación Meteorológica (EMA)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-symbol" style="background: #4CAF50; border-radius: 50%; box-shadow: 0 0 10px #4CAF50;"></div>
+                    <span>Estación Pluviométrica</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-symbol" style="background: #9c27b0; border-radius: 50%; box-shadow: 0 0 15px #9c27b0;"></div>
+                    <span>Radar Meteorológico</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-symbol" style="background: rgba(0, 200, 255, 0.3); border: 2px dashed #00c8ff; box-shadow: 0 0 10px #00c8ff;"></div>
+                    <span>Cobertura Radar (70 km)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-symbol" style="background: linear-gradient(90deg, #00c8ff, #0078ff); box-shadow: 0 0 8px #00c8ff;"></div>
+                    <span>Enlaces de Comunicación</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-symbol" style="background: rgba(0, 255, 136, 0.15); border: 1px solid #00ff88;"></div>
+                    <span>Límites Cantonales</span>
+                </div>
+            </div>
+            
+            <svg class="map-svg" viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <radialGradient id="radarGradient" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" style="stop-color:#e91e63"/>
+                        <stop offset="50%" style="stop-color:#9c27b0"/>
+                        <stop offset="100%" style="stop-color:#3f51b5"/>
+                    </radialGradient>
+                    
+                    <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#00c8ff;stop-opacity:0"/>
+                        <stop offset="50%" style="stop-color:#00c8ff;stop-opacity:1"/>
+                        <stop offset="100%" style="stop-color:#0078ff;stop-opacity:0"/>
+                    </linearGradient>
+                    
+                    <radialGradient id="centerGradient" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" style="stop-color:#00c8ff"/>
+                        <stop offset="100%" style="stop-color:#0078ff"/>
+                    </radialGradient>
+                    
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                        <feMerge> 
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                
+                <!-- Partículas atmosféricas animadas -->
+                <circle class="weather-particle" cx="200" cy="150" r="2.5"/>
+                <circle class="weather-particle" cx="400" cy="200" r="1.8"/>
+                <circle class="weather-particle" cx="600" cy="250" r="3"/>
+                <circle class="weather-particle" cx="800" cy="180" r="1.5"/>
+                <circle class="weather-particle" cx="1000" cy="220" r="2.2"/>
+                <circle class="weather-particle" cx="300" cy="500" r="2"/>
+                <circle class="weather-particle" cx="700" cy="550" r="2.5"/>
+                <circle class="weather-particle" cx="900" cy="450" r="1.8"/>
+                
+                <!-- Límites Cantonales basados en el mapa real -->
+                
+                <!-- SUCUMBÍOS (Cantón) -->
+                <path class="canton-boundary" d="M 180 120 L 380 120 L 380 320 L 180 320 Z" />
+                <text x="280" y="220" class="canton-label">SUCUMBÍOS</text>
+                
+                <!-- CASCALES -->
+                <path class="canton-boundary" d="M 380 180 L 520 180 L 520 380 L 380 380 Z" />
+                <text x="450" y="280" class="canton-label">CASCALES</text>
+                
+                <!-- LAGO AGRIO -->
+                <path class="canton-boundary" d="M 520 120 L 720 120 L 720 320 L 520 320 Z" />
+                <text x="620" y="220" class="canton-label">LAGO AGRIO</text>
+                
+                <!-- GONZALO PIZARRO -->
+                <path class="canton-boundary" d="M 180 320 L 420 320 L 420 520 L 180 520 Z" />
+                <text x="300" y="420" class="canton-label">GONZALO PIZARRO</text>
+                
+                <!-- PUTUMAYO -->
+                <path class="canton-boundary" d="M 720 120 L 920 120 L 920 380 L 720 380 Z" />
+                <text x="820" y="250" class="canton-label">PUTUMAYO</text>
+                
+                <!-- CUYABENO -->
+                <path class="canton-boundary" d="M 820 380 L 1100 380 L 1100 580 L 820 580 Z" />
+                <text x="960" y="480" class="canton-label">CUYABENO</text>
+                
+                <!-- SHUSHUFINDI -->
+                <path class="canton-boundary" d="M 420 320 L 820 320 L 820 580 L 420 580 Z" />
+                <text x="620" y="450" class="canton-label">SHUSHUFINDI</text>
+                
+                <!-- Límite provincial -->
+                <path class="province-boundary" d="M 180 120 L 920 120 L 1100 120 L 1100 580 L 420 580 L 180 520 Z" />
+                
+                <!-- Cobertura de Radares estratégicamente ubicados -->
+                <circle class="radar-coverage" cx="360" cy="240" r="160" />
+                <circle class="radar-coverage" cx="720" cy="450" r="160" />
+                <circle class="radar-coverage" cx="850" cy="200" r="160" />
+                
+                <!-- Centro de Control Principal - Lago Agrio -->
+                <rect class="control-center" x="590" y="200" width="60" height="60" rx="12" />
+                <text x="620" y="280" class="station-label" style="font-size: 16px; font-weight: bold; fill: #00c8ff;">🏢 Centro Control</text>
+                <text x="620" y="295" class="station-label" style="font-size: 12px;">Lago Agrio (Nueva Loja)</text>
+                
+                <!-- Radar 1 - Zona Central (Cascales/Lago Agrio) -->
+                <polygon class="radar-station" points="360,240 380,260 360,280 340,260" />
+                <text x="360" y="320" class="station-label">📡 Radar Doppler 1</text>
+                <text x="360" y="335" class="station-label" style="font-size: 10px;">Cascales - Furuno WR-2120</text>
+                
+                <!-- Radar 2 - Zona Sur (Shushufindi) -->
+                <polygon class="radar-station" points="720,450 740,470 720,490 700,470" />
+                <text x="720" y="520" class="station-label">📡 Radar Doppler 2</text>
+                <text x="720" y="535" class="station-label" style="font-size: 10px;">Shushufindi - Alcance 70km</text>
+                
+                <!-- Radar 3 - Zona Este (Putumayo) -->
+                <polygon class="radar-station" points="850,200 870,220 850,240 830,220" />
+                <text x="850" y="270" class="station-label">📡 Radar Doppler 3</text>
+                <text x="850" y="285" class="station-label" style="font-size: 10px;">Putumayo - Frontera Colombia</text>
+                
+                <!-- Estaciones Meteorológicas Automáticas (EMA) distribuidas por cantones -->
+                
+                <!-- EMA Sucumbíos -->
+                <circle class="station-ema" cx="250" cy="180" r="12" />
+                <text x="250" y="160" class="station-label">🌡️ EMA Sucumbíos</text>
+                <text x="250" y="210" class="station-label" style="font-size: 9px;">La Bonita</text>
+                
+                <!-- EMA Cascales -->
+                <circle class="station-ema" cx="450" cy="220" r="12" />
+                <text x="450" y="200" class="station-label">🌡️ EMA Cascales</text>
+                <text x="450" y="250" class="station-label" style="font-size: 9px;">El Dorado</text>
+                
+                <!-- EMA Lago Agrio Central -->
+                <circle class="station-ema" cx="580" cy="180" r="12" />
+                <text x="580" y="160" class="station-label">🌡️ EMA Lago Agrio</text>
+                <text x="580" y="210" class="station-label" style="font-size: 9px;">Nueva Loja</text>
+                
+                <!-- EMA Lago Agrio Norte -->
+                <circle class="station-ema" cx="650" cy="150" r="12" />
+                <text x="650" y="130" class="station-label">🌡️ EMA Norte</text>
+                <text x="650" y="180" class="station-label" style="font-size: 9px;">Dureno</text>
+                
+                <!-- EMA Putumayo -->
+                <circle class="station-ema" cx="850" cy="200" r="12" />
+                <text x="850" y="180" class="station-label">🌡️ EMA Putumayo</text>
+                <text x="850" y="230" class="station-label" style="font-size: 9px;">Puerto El Carmen</text>
+                
+                <!-- EMA Gonzalo Pizarro -->
+                <circle class="station-ema" cx="300" cy="420" r="12" />
+                <text x="300" y="400" class="station-label">🌡️ EMA G. Pizarro</text>
+                <text x="300" y="450" class="station-label" style="font-size: 9px;">Lumbaquí</text>
+                
+                <!-- EMA Shushufindi -->
+                <circle class="station-ema" cx="620" cy="420" r="12" />
+                <text x="620" y="400" class="station-label">🌡️ EMA Shushufindi</text>
+                <text x="620" y="450" class="station-label" style="font-size: 9px;">Centro Urbano</text>
+                
+                <!-- EMA Cuyabeno -->
+                <circle class="station-ema" cx="950" cy="480" r="12" />
+                <text x="950" y="460" class="station-label">🌡️ EMA Cuyabeno</text>
+                <text x="950" y="510" class="station-label" style="font-size: 9px;">Tarapoa</text>
+                
+                <!-- Estaciones Pluviométricas estratégicamente distribuidas -->
+                
+                <!-- Zona Sucumbíos -->
+                <circle class="station-pluvio" cx="220" cy="150" r="7" />
+                <text x="220" y="140" class="station-label" style="font-size: 9px;">☔ P1</text>
+                
+                <circle class="station-pluvio" cx="320" cy="180" r="7" />
+                <text x="320" y="170" class="station-label" style="font-size: 9px;">☔ P2</text>
+                
+                <circle class="station-pluvio" cx="280" cy="280" r="7" />
+                <text x="280" y="270" class="station-label" style="font-size: 9px;">☔ P3</text>
+                
+                <!-- Zona Cascales -->
+                <circle class="station-pluvio" cx="420" cy="250" r="7" />
+                <text x="420" y="240" class="station-label" style="font-size: 9px;">☔ P4</text>
+                
+                <circle class="station-pluvio" cx="480" cy="320" r="7" />
+                <text x="480" y="310" class="station-label" style="font-size: 9px;">☔ P5</text>
+                
+                <!-- Zona Lago Agrio -->
+                <circle class="station-pluvio" cx="550" cy="200" r="7" />
+                <text x="550" y="190" class="station-label" style="font-size: 9px;">☔ P6</text>
+                
+                <circle class="station-pluvio" cx="680" cy="180" r="7" />
+                <text x="680" y="170" class="station-label" style="font-size: 9px;">☔ P7</text>
+                
+                <circle class="station-pluvio" cx="600" cy="280" r="7" />
+                <text x="600" y="270" class="station-label" style="font-size: 9px;">☔ P8</text>
+                
+                <!-- Zona Putumayo -->
+                <circle class="station-pluvio" cx="780" cy="180" r="7" />
+                <text x="780" y="170" class="station-label" style="font-size: 9px;">☔ P9</text>
+                
+                <circle class="station-pluvio" cx="880" cy="280" r="7" />
+                <text x="880" y="270" class="station-label" style="font-size: 9px;">☔ P10</text>
+                
+                <!-- Zona Gonzalo Pizarro -->
+                <circle class="station-pluvio" cx="250" cy="450" r="7" />
+                <text x="250" y="440" class="station-label" style="font-size: 9px;">☔ P11</text>
+                
+                <circle class="station-pluvio" cx="350" cy="480" r="7" />
+                <text x="350" y="470" class="station-label" style="font-size: 9px;">☔ P12</text>
+                
+                <!-- Zona Shushufindi -->
+                <circle class="station-pluvio" cx="520" cy="450" r="7" />
+                <text x="520" y="440" class="station-label" style="font-size: 9px;">☔ P13</text>
+                
+                <circle class="station-pluvio" cx="680" cy="520" r="7" />
+                <text x="680" y="510" class="station-label" style="font-size: 9px;">☔ P14</text>
+                
+                <!-- Zona Cuyabeno -->
+                <circle class="station-pluvio" cx="1000" cy="450" r="7" />
+                <text x="1000" y="440" class="station-label" style="font-size: 9px;">☔ P15</text>
+                
+                <!-- Flujos de datos animados desde todas las estaciones al centro -->
+                <path class="data-stream" d="M 620 240 Q 500 220 450 220" />
+                <path class="data-stream" d="M 620 240 Q 635 190 650 150" />
+                <path class="data-stream" d="M 620 240 Q 735 220 850 200" />
+                <path class="data-stream" d="M 620 240 Q 460 330 300 420" />
+                <path class="data-stream" d="M 620 240 Q 620 330 620 420" />
+                <path class="data-stream" d="M 620 240 Q 785 360 950 480" />
+                <path class="data-stream" d="M 620 240 Q 400 210 250 180" />
+                <path class="data-stream" d="M 620 240 Q 490 180 580 180" />
+                <path class="data-stream" d="M 850 200 Q 735 220 620 240" />
+                
+                <!-- Enlaces de comunicación principales (líneas más gruesas) -->
+                <line class="connection-line" x1="620" y1="240" x2="450" y2="220" stroke-width="3"/>
+                <line class="connection-line" x1="620" y1="240" x2="650" y2="150" stroke-width="3"/>
+                <line class="connection-line" x1="620" y1="240" x2="850" y2="200" stroke-width="3"/>
+                <line class="connection-line" x1="620" y1="240" x2="300" y2="420" stroke-width="3"/>
+                <line class="connection-line" x1="620" y1="240" x2="620" y2="420" stroke-width="3"/>
+                <line class="connection-line" x1="620" y1="240" x2="950" y2="480" stroke-width="3"/>
+                <line class="connection-line" x1="620" y1="240" x2="250" y2="180" stroke-width="3"/>
+                <line class="connection-line" x1="620" y1="240" x2="580" y2="180" stroke-width="2"/>
+                
+                <!-- Conexiones entre radares -->
+                <line class="connection-line" x1="360" y1="240" x2="620" y2="240" stroke-width="4" stroke="#ff6b35"/>
+                <line class="connection-line" x1="620" y1="240" x2="720" y2="450" stroke-width="4" stroke="#ff6b35"/>
+                <line class="connection-line" x1="620" y1="240" x2="850" y2="200" stroke-width="4" stroke="#ff6b35"/>
+                <line class="connection-line" x1="850" y1="200" x2="720" y2="450" stroke-width="3" stroke="#9c27b0"/>
+                
+                <!-- Indicadores de señal para el centro de control -->
+                <g class="signal-indicator">
+                    <circle cx="620" cy="220" r="20" fill="none" stroke="#00c8ff" stroke-width="1.5" opacity="0.4">
+                        <animate attributeName="r" values="20;35;50" dur="2.5s" repeatCount="indefinite"/>
+                        <animate attributeName="opacity" values="0.4;0.2;0" dur="2.5s" repeatCount="indefinite"/>
+                    </circle>
+                    <circle cx="620" cy="220" r="25" fill="none" stroke="#00c8ff" stroke-width="1.5" opacity="0.3">
+                        <animate attributeName="r" values="25;40;55" dur="2.5s" repeatCount="indefinite" begin="0.6s"/>
+                        <animate attributeName="opacity" values="0.3;0.1;0" dur="2.5s" repeatCount="indefinite" begin="0.6s"/>
+                    </circle>
+                </g>
+                
+                <!-- Indicadores de señal para radares -->
+                <g class="signal-indicator">
+                    <circle cx="360" cy="220" r="18" fill="none" stroke="#9c27b0" stroke-width="1.5" opacity="0.5">
+                        <animate attributeName="r" values="18;30;42" dur="2s" repeatCount="indefinite"/>
+                        <animate attributeName="opacity" values="0.5;0.2;0" dur="2s" repeatCount="indefinite"/>
+                    </circle>
+                </g>
+                
+                <g class="signal-indicator">
+                    <circle cx="720" cy="430" r="20" fill="none" stroke="#9c27b0" stroke-width="1.5" opacity="0.5">
+                        <animate attributeName="r" values="20;32;44" dur="2.2s" repeatCount="indefinite"/>
+                        <animate attributeName="opacity" values="0.5;0.2;0" dur="2.2s" repeatCount="indefinite"/>
+                    </circle>
+                </g>
+                
+                <!-- Indicadores de señal para radar Putumayo -->
+                <g class="signal-indicator">
+                    <circle cx="850" cy="180" r="18" fill="none" stroke="#9c27b0" stroke-width="1.5" opacity="0.5">
+                        <animate attributeName="r" values="18;30;42" dur="2.4s" repeatCount="indefinite"/>
+                        <animate attributeName="opacity" values="0.5;0.2;0" dur="2.4s" repeatCount="indefinite"/>
+                    </circle>
+                </g>
+                
+                <!-- Referencias geográficas -->
+                <text x="100" y="60" style="font-size: 18px; font-weight: bold; fill: #00ff88; text-shadow: 0 0 12px #00ff88;">🇨🇴 COLOMBIA</text>
+                <text x="1050" y="650" style="font-size: 18px; font-weight: bold; fill: #00ff88; text-shadow: 0 0 12px #00ff88;">🇵🇪 PERÚ</text>
+                <text x="50" y="600" style="font-size: 14px; fill: #00c8ff; text-shadow: 0 0 10px #00c8ff;">🏞️ Río Putumayo</text>
+                <text x="500" y="50" style="font-size: 22px; font-weight: bold; fill: #ffffff; text-shadow: 0 0 20px #00c8ff;">🌎 PROVINCIA DE SUCUMBÍOS</text>
+                <text x="520" y="75" style="font-size: 14px; fill: rgba(255,255,255,0.8);">Región Amazónica - Ecuador</text>
+                
+                <!-- Panel de información en tiempo real ampliado -->
+                <g class="real-time-data">
+                    <rect x="50" y="600" width="280" height="80" rx="12" fill="rgba(0, 0, 0, 0.85)" stroke="#00c8ff" stroke-width="1.5"/>
+                    <text x="60" y="620" style="font-size: 14px; fill: #00c8ff; font-weight: bold;">📊 Datos Meteorológicos en Tiempo Real</text>
+                    <text x="60" y="640" style="font-size: 11px; fill: white;">🌡️ Temperatura promedio: 25.2°C (Rango: 22.1-28.4°C)</text>
+                    <text x="60" y="655" style="font-size: 11px; fill: white;">☔ Precipitación acumulada: 3.7mm/h</text>
+                    <text x="60" y="670" style="font-size: 11px; fill: white;">💨 Viento: 8.2 km/h NE | 📡 Cobertura radar: 100%</text>
+                </g>
+                
+                <!-- Panel de estado del sistema ampliado -->
+                <g class="alert-status">
+                    <rect x="850" y="600" width="300" height="80" rx="12" fill="rgba(0, 255, 0, 0.1)" stroke="#00ff00" stroke-width="1.5"/>
+                    <text x="860" y="620" style="font-size: 14px; fill: #00ff00; font-weight: bold;">✅ Estado Operativo del Sistema</text>
+                    <text x="860" y="640" style="font-size: 11px; fill: white;">🟢 Estaciones EMA: 8/8 Online | Pluviométricas: 15/15 OK</text>
+                    <text x="860" y="655" style="font-size: 11px; fill: white;">📡 Radares Doppler: 3/3 Operativos | Última calibración: OK</text>
+                    <text x="860" y="670" style="font-size: 11px; fill: white;">🌐 Disponibilidad de red: 99.8% | Próximo mantenimiento: 15 días</text>
+                </g>
+                
+                <!-- Indicador de cobertura territorial -->
+                <g class="coverage-info">
+                    <rect x="400" y="600" width="250" height="80" rx="12" fill="rgba(123, 44, 191, 0.1)" stroke="#7b2cbf" stroke-width="1.5"/>
+                    <text x="410" y="620" style="font-size: 14px; fill: #7b2cbf; font-weight: bold;">🎯 Cobertura y Alcance</text>
+                    <text x="410" y="640" style="font-size: 11px; fill: white;">📍 Territorio cubierto: 18,612 km² (100%)</text>
+                    <text x="410" y="655" style="font-size: 11px; fill: white;">👥 Población beneficiada: 524,259 habitantes</text>
+                    <text x="410" y="670" style="font-size: 11px; fill: white;">⚡ Alertas emitidas hoy: 3 | Precisión pronósticos: 87%</text>
+                </g>
+            </svg>
+            
+            <div class="tooltip" id="tooltip"></div>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>📡 Tecnología Radar Avanzada</h3>
+                <p><strong>Furuno WR-2120 Banda X:</strong> Tres radares de doble polarización con capacidades de nowcasting</p>
+                <p><strong>Ubicación estratégica:</strong> Cascales (zona norte), Shushufindi (zona sur) y Putumayo (zona este-frontera) para cobertura completa</p>
+                <p><strong>Cobertura total:</strong> Solapamiento optimizado eliminando zonas ciegas en toda la provincia</p>
+                <p><strong>Detección especializada:</strong> Monitoreo de sistemas convectivos transfronterizos desde Colombia</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>🌡️ Red de Estaciones Meteorológicas</h3>
+                <p><strong>Distribución cantonal:</strong> Una EMA por cantón asegurando representatividad climática</p>
+                <p><strong>Campbell Scientific CR6:</strong> Dataloggers de precisión científica con sensores calibrados</p>
+                <p><strong>Monitoreo integral:</strong> Temperatura, humedad, precipitación, viento, presión y radiación solar</p>
+                <p><strong>Transmisión continua:</strong> Datos cada 10 minutos vía 4G LTE con respaldo satelital</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>☔ Red Pluviométrica Complementaria</h3>
+                <p><strong>Cobertura hidrológica:</strong> 15 estaciones distribuidas en microcuencas estratégicas</p>
+                <p><strong>Alta precisión:</strong> Resolución de 0.2mm con capacidad hasta 999.8mm por evento</p>
+                <p><strong>Comunicación robusta:</strong> Radio 915 MHz con alcance de 300 metros</p>
+                <p><strong>Autonomía extendida:</strong> Batería de litio con 2 años de funcionamiento continuo</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>🏢 Centro de Control Unificado</h3>
+                <p><strong>Ubicación central:</strong> Lago Agrio (Nueva Loja) - Capital provincial</p>
+                <p><strong>Infraestructura crítica:</strong> Servidores redundantes Dell PowerEdge con UPS y generador</p>
+                <p><strong>Conectividad múltiple:</strong> Fibra óptica 100 Mbps, 4G LTE y enlaces satelitales</p>
+                <p><strong>Operación 24/7:</strong> Monitoreo continuo con alertas automáticas en tiempo real</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Sistema de tooltips mejorado con información específica de cada cantón
+        const tooltip = document.getElementById('tooltip');
+        const stations = document.querySelectorAll('.station-ema, .station-pluvio, .radar-station, .control-center');
+        
+        const tooltipData = {
+            'station-ema': {
+                title: '🌡️ Estación Meteorológica Automática Campbell CR6',
+                content: `
+                    <strong>Sensores de precisión científica:</strong><br>
+                    • Temperatura/Humedad: ±0.1°C, ±2% HR<br>
+                    • Anemómetro sónico: Velocidad y dirección del viento<br>
+                    • Pluviómetro de balancín: ±0.2mm resolución<br>
+                    • Barómetro digital: ±0.1 hPa precisión<br>
+                    • Piranómetro: Radiación solar global<br>
+                    <strong>Comunicación:</strong> 4G LTE + Iridium satelital<br>
+                    <strong>Energía:</strong> Solar 100W + Batería 55Ah (15 días autonomía)
+                `
+            },
+            'station-pluvio': {
+                title: '☔ Estación Pluviométrica Automática',
+                content: `
+                    <strong>Davis Instruments 6250:</strong><br>
+                    • Resolución: 0.2mm por basculamiento<br>
+                    • Precisión: ±4% hasta 100mm/h<br>
+                    • Rango: 0-999.8mm por evento<br>
+                    • Comunicación: Radio 915 MHz (300m alcance)<br>
+                    • Protección: IP67, resistente UV<br>
+                    <strong>Autonomía:</strong> Batería litio 2 años<br>
+                    <strong>Aplicación:</strong> Monitoreo microcuencas amazónicas
+                `
+            },
+            'radar-station': {
+                title: '📡 Radar Meteorológico Doppler Furuno WR-2120',
+                content: `
+                    <strong>Especificaciones técnicas avanzadas:</strong><br>
+                    • Frecuencia: 9.4 GHz (Banda X)<br>
+                    • Polarización: Dual simultánea (H/V)<br>
+                    • Potencia: 100W por polarización<br>
+                    • Alcance efectivo: 70 km cobertura<br>
+                    • Resolución: 75m espacial, 5min temporal<br>
+                    <strong>Productos especializados:</strong><br>
+                    • Nowcasting 0-6 horas<br>
+                    • Clasificación de hidrometeoros<br>
+                    • Detección de cizalladura del viento
+                `
+            },
+            'control-center': {
+                title: '🏢 Centro de Control Principal - Lago Agrio',
+                content: `
+                    <strong>Infraestructura tecnológica:</strong><br>
+                    • Servidores: Dell PowerEdge R750 redundantes<br>
+                    • Storage: 20TB SSD con RAID 6<br>
+                    • UPS: APC 20kVA + Generador 75kVA<br>
+                    • Red: Fibra óptica 100 Mbps dedicada<br>
+                    <strong>Software especializado:</strong><br>
+                    • PostgreSQL + TimescaleDB<br>
+                    • Dashboard Grafana en tiempo real<br>
+                    • API REST para integradores<br>
+                    <strong>SLA:</strong> Disponibilidad garantizada 99.7%
+                `
+            }
+        };
+        
+        stations.forEach(station => {
+            station.addEventListener('mouseenter', (e) => {
+                const rect = e.target.getBoundingClientRect();
+                const mapRect = document.querySelector('.map-container').getBoundingClientRect();
+                
+                let stationType = '';
+                if (e.target.classList.contains('station-ema')) stationType = 'station-ema';
+                else if (e.target.classList.contains('station-pluvio')) stationType = 'station-pluvio';
+                else if (e.target.classList.contains('radar-station')) stationType = 'radar-station';
+                else if (e.target.classList.contains('control-center')) stationType = 'control-center';
+                
+                const data = tooltipData[stationType];
+                if (data) {
+                    tooltip.innerHTML = `<strong>${data.title}</strong><br>${data.content}`;
+                    tooltip.style.left = (rect.left - mapRect.left + 30) + 'px';
+                    tooltip.style.top = (rect.top - mapRect.top - 20) + 'px';
+                    tooltip.classList.add('show');
+                }
+            });
+            
+            station.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('show');
+            });
+        });
+        
+        // Efectos de clic con ondas expansivas
+        stations.forEach(station => {
+            station.addEventListener('click', (e) => {
+                const rect = e.target.getBoundingClientRect();
+                const ripple = document.createElement('div');
+                ripple.style.position = 'absolute';
+                ripple.style.borderRadius = '50%';
+                ripple.style.background = 'rgba(0, 200, 255, 0.4)';
+                ripple.style.transform = 'scale(0)';
+                ripple.style.animation = 'ripple 0.8s linear';
+                ripple.style.left = rect.left + 'px';
+                ripple.style.top = rect.top + 'px';
+                ripple.style.width = ripple.style.height = '60px';
+                ripple.style.pointerEvents = 'none';
+                document.body.appendChild(ripple);
+                
+                setTimeout(() => {
+                    if (document.body.contains(ripple)) {
+                        document.body.removeChild(ripple);
+                    }
+                }, 800);
+            });
+        });
+        
+        // Animación secuencial de entrada para tarjetas
+        const statCards = document.querySelectorAll('.stat-card');
+        statCards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(40px)';
+            setTimeout(() => {
+                card.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 150);
+        });
+        
+        // Simulación de datos meteorológicos en tiempo real
+        function updateRealTimeData() {
+            const tempElement = document.querySelector('.real-time-data text:nth-child(3)');
+            const precipElement = document.querySelector('.real-time-data text:nth-child(4)');
+            const windElement = document.querySelector('.real-time-data text:nth-child(5)');
+            
+            if (tempElement && precipElement && windElement) {
+                const tempMin = (20 + Math.random() * 4).toFixed(1);
+                const tempMax = (26 + Math.random() * 4).toFixed(1);
+                const tempAvg = ((parseFloat(tempMin) + parseFloat(tempMax)) / 2).toFixed(1);
+                const precip = (Math.random() * 8).toFixed(1);
+                const windSpeed = (5 + Math.random() * 8).toFixed(1);
+                const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                const windDir = directions[Math.floor(Math.random() * directions.length)];
+                
+                tempElement.textContent = `🌡️ Temperatura promedio: ${tempAvg}°C (Rango: ${tempMin}-${tempMax}°C)`;
+                precipElement.textContent = `☔ Precipitación acumulada: ${precip}mm/h`;
+                windElement.textContent = `💨 Viento: ${windSpeed} km/h ${windDir} | 📡 Cobertura radar: 100%`;
+            }
+        }
+        
+        // Actualizar datos cada 8 segundos
+        setInterval(updateRealTimeData, 8000);
+        
+        // CSS para animación ripple
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(6);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Generador de partículas climáticas
+        function createWeatherParticle() {
+            const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            const svg = document.querySelector('.map-svg');
+            
+            particle.setAttribute('class', 'weather-particle');
+            particle.setAttribute('cx', Math.random() * 1200);
+            particle.setAttribute('cy', Math.random() * 700);
+            particle.setAttribute('r', Math.random() * 3.5 + 1);
+            particle.setAttribute('fill', `rgba(${Math.random() * 100}, ${150 + Math.random() * 105}, 255, ${0.2 + Math.random() * 0.4})`);
+            
+            svg.appendChild(particle);
+            
+            setTimeout(() => {
+                if (svg.contains(particle)) {
+                    svg.removeChild(particle);
+                }
+            }, 10000);
+        }
+        
+        // Crear partículas cada 4 segundos
+        setInterval(createWeatherParticle, 4000);
+        
+        // Efecto hover para límites cantonales
+        const cantons = document.querySelectorAll('.canton-boundary');
+        cantons.forEach(canton => {
+            canton.addEventListener('mouseenter', (e) => {
+                e.target.style.fill = 'rgba(0, 255, 136, 0.2)';
+                e.target.style.strokeWidth = '2.5';
+            });
+            
+            canton.addEventListener('mouseleave', (e) => {
+                e.target.style.fill = 'rgba(0, 255, 136, 0.08)';
+                e.target.style.strokeWidth = '1.5';
+            });
+        });
+        
+        // Contador de alertas y estadísticas dinámicas
+        let alertCount = 3;
+        let systemUptime = 99.8;
+        let forecastAccuracy = 87;
+        
+        function updateSystemStats() {
+            const alertElement = document.querySelector('.coverage-info text:nth-child(5)');
+            const uptimeElement = document.querySelector('.alert-status text:nth-child(5)');
+            
+            if (alertElement && uptimeElement) {
+                // Simular cambios graduales en las métricas
+                if (Math.random() > 0.7) {
+                    alertCount += Math.floor(Math.random() * 3);
+                }
+                
+                systemUptime += (Math.random() - 0.5) * 0.1;
+                systemUptime = Math.max(98.5, Math.min(99.9, systemUptime));
+                
+                forecastAccuracy += (Math.random() - 0.5) * 2;
+                forecastAccuracy = Math.max(82, Math.min(95, forecastAccuracy));
+                
+                alertElement.textContent = `⚡ Alertas emitidas hoy: ${alertCount} | Precisión pronósticos: ${Math.round(forecastAccuracy)}%`;
+                uptimeElement.textContent = `🌐 Disponibilidad de red: ${systemUptime.toFixed(1)}% | Próximo mantenimiento: ${15 - Math.floor(Math.random() * 3)} días`;
+            }
+        }
+        
+        // Actualizar estadísticas cada 15 segundos
+        setInterval(updateSystemStats, 15000);
+        
+        // Efectos de pulsación para indicadores críticos
+        const statusDot = document.querySelector('.status-dot');
+        if (statusDot) {
+            setInterval(() => {
+                statusDot.style.boxShadow = '0 0 20px #00ff00';
+                setTimeout(() => {
+                    statusDot.style.boxShadow = 'none';
+                }, 200);
+            }, 2000);
+        }
+        
+        // Simulador de actividad de red en tiempo real
+        function simulateNetworkActivity() {
+            const connections = document.querySelectorAll('.connection-line');
+            connections.forEach((line, index) => {
+                setTimeout(() => {
+                    line.style.strokeOpacity = '1';
+                    line.style.strokeWidth = '4';
+                    setTimeout(() => {
+                        line.style.strokeOpacity = '0.7';
+                        line.style.strokeWidth = '2';
+                    }, 300);
+                }, index * 200);
+            });
+        }
+        
+        // Activar simulación de red cada 10 segundos
+        setInterval(simulateNetworkActivity, 10000);
+        
+        // Detección de eventos meteorológicos simulados
+        function simulateWeatherEvent() {
+            const events = [
+                { type: 'lluvia', icon: '🌧️', message: 'Precipitación moderada detectada en Cuyabeno' },
+                { type: 'viento', icon: '💨', message: 'Rachas de viento intensas en zona norte' },
+                { type: 'temperatura', icon: '🌡️', message: 'Temperatura en ascenso en Lago Agrio' },
+                { type: 'humedad', icon: '💧', message: 'Alta humedad relativa en Putumayo' }
+            ];
+            
+            if (Math.random() > 0.8) {
+                const event = events[Math.floor(Math.random() * events.length)];
+                
+                // Crear notificación temporal
+                const notification = document.createElement('div');
+                notification.style.position = 'fixed';
+                notification.style.top = '20px';
+                notification.style.right = '20px';
+                notification.style.background = 'rgba(0, 200, 255, 0.9)';
+                notification.style.color = 'white';
+                notification.style.padding = '15px 20px';
+                notification.style.borderRadius = '10px';
+                notification.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.3)';
+                notification.style.fontSize = '14px';
+                notification.style.fontWeight = 'bold';
+                notification.style.zIndex = '10000';
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                notification.style.transition = 'all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                notification.innerHTML = `${event.icon} ${event.message}`;
+                
+                document.body.appendChild(notification);
+                
+                // Animación de entrada
+                setTimeout(() => {
+                    notification.style.opacity = '1';
+                    notification.style.transform = 'translateX(0)';
+                }, 100);
+                
+                // Animación de salida
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        if (document.body.contains(notification)) {
+                            document.body.removeChild(notification);
+                        }
+                    }, 500);
+                }, 4000);
+            }
+        }
+        
+        // Simular eventos meteorológicos cada 20 segundos
+        setInterval(simulateWeatherEvent, 20000);
+        
+        // Inicialización de la aplicación
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🌦️ Sistema de Monitoreo Climático Sucumbíos inicializado');
+            console.log('📡 Red operativa: 8 EMA + 15 Pluviométricas + 3 Radares Doppler');
+            console.log('🎯 Cobertura: 18,612 km² - 524,259 beneficiarios');
+            console.log('🌍 Cobertura radar ampliada: Zona fronteriza Colombia incluida');
+            
+            // Simular carga inicial del sistema
+            setTimeout(() => {
+                updateRealTimeData();
+                updateSystemStats();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
